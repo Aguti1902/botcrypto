@@ -1,0 +1,167 @@
+mode: paper  # backtest | paper | live
+
+symbols:
+  - "BTC/USDT"
+  - "ETH/USDT"
+
+timeframe: "1m"
+capital: 20000
+fees_bps: 10
+slippage_bps: 2
+
+risk:
+  risk_per_trade: 0.003  # 0.3% máx por operación
+  max_daily_drawdown: 0.04  # 4% hard-stop diario
+  max_trades_per_minute: 6
+  max_trades_per_day: 1200
+  max_position_exposure_pct: 25  # Por activo
+  max_total_exposure_pct: 80  # Total
+
+portfolio:
+  allocator: "risk_parity"  # risk_parity | equal_weight | momentum
+  target_vol_annual: 0.25
+  rebalance_hours: 12
+  cost_aware: true
+  min_rebalance_threshold_pct: 2.0
+
+strategies:
+  trend_atr:
+    enabled: true
+    atr_mult_sl: 2.0
+    atr_mult_tp: 2.0
+    atr_trailing: 1.0
+    sma_fast: 50
+    sma_slow: 200
+    min_vol_zscore: 0.0
+    atr_period: 14
+    
+  meanrev_rsi:
+    enabled: true
+    rsi_th: 30
+    rsi_period: 14
+    bb_period: 20
+    bb_std: 2.0
+    min_rr: 1.5
+    
+  breakout_atr:
+    enabled: true
+    lookback: 40
+    buffer_atr: 0.5
+    atr_period: 14
+    min_volume_mult: 1.2
+    
+  market_maker:
+    enabled: false
+    spread_bps: 12
+    order_size_pct_equity: 0.0005
+    post_only: true
+    inventory_cap_pct_equity: 5
+    inventory_k: 0.5
+    
+  grid_narrow:
+    enabled: false
+    grid_levels: 18
+    grid_step_bps: 15
+    per_level_size_pct_equity: 0.0005
+    take_profit_per_fill_bps: 18
+
+ml:
+  ensemble:
+    enabled: true
+    horizon_bars: 1
+    min_confidence: 0.58
+    max_turnover_per_day: 3.0
+    models:
+      - xgboost
+      - lightgbm
+      - random_forest
+    calibration: "isotonic"  # platt | isotonic
+    
+  features:
+    lookback_periods: [5, 10, 20, 50]
+    include_volume: true
+    include_microstructure: true
+    include_seasonality: true
+    
+  training:
+    train_split: 0.6
+    val_split: 0.2
+    test_split: 0.2
+    min_samples: 10000
+    update_frequency_hours: 24
+    
+  optuna:
+    n_trials: 50
+    timeout_minutes: 20
+    n_jobs: 4
+
+rl:
+  ppo_sizer:
+    enabled: true
+    size_bounds_pct_equity: [0.0, 0.01]
+    reward:
+      pnl_weight: 1.0
+      dd_penalty: 4.0
+      fee_penalty: 2.0
+      variance_penalty: 1.0
+    training:
+      total_timesteps: 100000
+      learning_rate: 0.0003
+      n_steps: 2048
+      batch_size: 64
+      n_epochs: 10
+
+backtest:
+  start_date: "2023-01-01"
+  end_date: "2024-12-31"
+  initial_cash: 20000
+  commission: 0.001
+  slippage: 0.0002
+  
+  walkforward:
+    enabled: true
+    train_period_days: 180
+    test_period_days: 30
+    anchored: false  # false = rolling, true = expanding
+
+paper:
+  simulate_latency_ms: 100
+  simulate_partial_fills: true
+  simulate_rejections: true
+  rejection_rate: 0.02
+
+live:
+  dry_run_orders: false  # true para dry-run incluso en modo live
+  max_retry_attempts: 3
+  retry_backoff_seconds: 2
+  graceful_shutdown_timeout_seconds: 30
+  
+exchanges:
+  binance:
+    enabled: true
+    type: "spot"  # spot | futures
+    rate_limit_buffer: 0.9
+    testnet: true
+    
+  uniswap:
+    enabled: false
+    version: 3
+    router_address: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+    slippage_tolerance: 0.005
+    
+  zeroex:
+    enabled: false
+    api_url: "https://api.0x.org"
+    slippage_percentage: 0.5
+
+logging:
+  level: "INFO"  # DEBUG | INFO | WARNING | ERROR
+  format: "json"
+  rotation: "100 MB"
+  retention: "30 days"
+  
+monitoring:
+  prometheus_enabled: true
+  prometheus_port: 9090
+  healthcheck_interval_seconds: 30
+
